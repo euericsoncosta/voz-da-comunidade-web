@@ -10,8 +10,8 @@ import ReportView from './views/ReportView';
 import ReportDetails from './views/ReportDetails';
 import ImpactView from './views/ImpactView';
 
-// const API_BASE = 'https://voz-da-comunidade-api-1.onrender.com';
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://voz-da-comunidade-api-1.onrender.com';
+// const API_BASE = 'http://localhost:3000';
 
 export default function App() {
   const [locationData, setLocationData] = useState({ lat: -4.1011, lng: -38.5086 });
