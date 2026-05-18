@@ -1,0 +1,9 @@
+/*
+
+Esta única linha carrega todo o motor do Tailwind v4.
+
+Ela substitui as 3 linhas antigas (@tailwind base, components, utilities).
+*/
+@import "tailwindcss";
+
+/* Abaixo desta linha, você pode adicionar estilos globais se precisar */

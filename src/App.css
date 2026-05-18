@@ -1,0 +1,51 @@
+/*
+Configurações Globais de Tipografia e Suavização
+Isso garante que a aplicação tenha um aspeto "Premium" em qualquer navegador.
+*/
+:root {
+font-synthesis: none;
+text-rendering: optimizeLegibility;
+-webkit-font-smoothing: antialiased;
+-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+margin: 0;
+padding: 0;
+overflow-x: hidden;
+background-color: #0f172a; /* Cor de fundo externa à moldura do telemóvel */
+}
+
+/*
+Esconder a scrollbar mas manter a rolagem ativa
+Essencial para manter o design limpo dentro da moldura do telemóvel.
+*/
+.no-scrollbar::-webkit-scrollbar {
+display: none;
+}
+
+.no-scrollbar {
+-ms-overflow-style: none;  /* IE and Edge /
+scrollbar-width: none;  / Firefox */
+}
+
+/*
+Animação de "Shake" (Tremer) para erros de Login/Registo
+*/
+@keyframes shake {
+0%, 100% { transform: translateX(0); }
+25% { transform: translateX(-5px); }
+75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/*
+Efeito de vidro (Glassmorphism) para as abas inferiores
+*/
+.glass-nav {
+backdrop-filter: blur(12px);
+-webkit-backdrop-filter: blur(12px);
+}
