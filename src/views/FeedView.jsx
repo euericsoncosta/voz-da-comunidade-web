@@ -6,51 +6,74 @@ import {
   Bell, 
   Sun, 
   Moon, 
-  RefreshCcw, 
+  RefreshCw, 
   AlertCircle, 
   CheckCircle, 
   CheckCircle2, 
   Clock, 
   Navigation,
-  Loader2
+  Loader2,
+  TrendingUp // Importado para o ícone de popularidade
 } from 'lucide-react';
 
 /**
- * FeedView - Lista cronológica de ocorrências ajustada para Web.
- * CONFIGURAÇÃO: Dark mode global unificado com o App.
+ * FeedView - Lista cronológica de ocorrências ajustada para Web e Mobile.
+ * CONFIGURAÇÃO: Ocultação nativa de scrollbars, API_BASE segura e ordenação por popularidade por padrão.
  */
 const FeedView = ({ 
   reports, 
   setReports, 
   handleLike, 
-  setView, // Inserido aqui para garantir o funcionamento do clique de detalhes
+  setView, 
   setSelectedReport, 
   isDark, 
-  setIsDark 
+  setIsDark,
+  API_BASE // Recebe dinamicamente do App.jsx
 }) => {
   const [loading, setLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('');
   const [showResolvedOnly, setShowResolvedOnly] = useState(false);
+  
+  // SOLUÇÃO: Iniciamos o estado como TRUE para que os mais relevantes fiquem sempre no topo por padrão!
+  const [sortByPopularity, setSortByPopularity] = useState(true);
 
-  // Alinhado com a porta do App para evitar erros de conexão local
-  const API_BASE = 'http://localhost:3000'; 
+  // Link de fallback caso a prop API_BASE não venha definida do App.jsx
+  const safeApiBase = API_BASE || 'https://voz-da-comunidade-api-1.onrender.com';
   const CURRENT_USER_ID = 1;
 
+  // Lógica de Filtragem e Ordenação Otimizada
   const displayReports = useMemo(() => {
-    let filtered = reports;
+    // Fazemos uma cópia rasa do array para não mutar os states originais do React
+    let filtered = reports ? [...reports] : [];
+
+    // 1. Aplica filtro de categoria
     if (selectedFilter) {
       filtered = filtered.filter(r => String(r.type).toLowerCase() === selectedFilter.toLowerCase());
     }
+
+    // 2. Aplica filtro de resolvidos
     if (showResolvedOnly) {
       filtered = filtered.filter(r => r.status === 'resolvido');
     }
+
+    // 3. Ordena por Popularidade se o botão estiver ativo (Likes + Comentários)
+    if (sortByPopularity) {
+      filtered.sort((a, b) => {
+        // Cálculo do score de popularidade: apoios (likes) + quantidade de comentários
+        const scoreA = (Number(a.likes_count) || 0) + (a.comments?.length || Number(a.comments_count) || 0);
+        const scoreB = (Number(b.likes_count) || 0) + (b.comments?.length || Number(b.comments_count) || 0);
+        
+        return scoreB - scoreA; // Ordena de forma decrescente (maior engajamento primeiro)
+      });
+    }
+
     return filtered;
-  }, [reports, selectedFilter, showResolvedOnly]);
+  }, [reports, selectedFilter, showResolvedOnly, sortByPopularity]);
 
   const refreshData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/feed?userId=${CURRENT_USER_ID}`, {
+      const response = await fetch(`${safeApiBase}/feed?userId=${CURRENT_USER_ID}`, {
         credentials: 'include'
       });
       const json = await response.json();
@@ -65,6 +88,17 @@ const FeedView = ({
   return (
     <div className={`flex-1 flex flex-col h-screen overflow-hidden transition-colors duration-500 ${isDark ? 'bg-slate-950 text-white' : 'bg-[#fdfcf0] text-black'}`}>
       
+      {/* Bloco de estilo local para forçar a remoção de barras de rolagem em todos os browsers */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}} />
+
       <header className={`p-6 border-b shrink-0 transition-colors duration-500 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#e5e4d7]'}`}>
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -85,7 +119,7 @@ const FeedView = ({
               onClick={refreshData}
               className={`p-3 rounded-xl active:scale-90 transition-all ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-400'}`}
             >
-              <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
             </button>
             <div className={`p-3 rounded-xl border transition-colors ${isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-white border-[#e5e4d7] text-slate-400'}`}>
               <Bell size={18} />
@@ -93,6 +127,7 @@ const FeedView = ({
           </div>
         </div>
 
+        {/* Barra de Filtros Deslizante */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
           {[
             { id: '', label: 'Tudo' },
@@ -113,6 +148,18 @@ const FeedView = ({
           ))}
           
           <div className={`w-[1px] h-4 mx-1 transition-colors ${isDark ? 'bg-slate-800' : 'bg-[#e5e4d7]'}`} />
+
+          {/* BOTÃO POPULARES (Relevância): Agora ativo por padrão */}
+          <button
+            onClick={() => setSortByPopularity(!sortByPopularity)}
+            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase border whitespace-nowrap flex items-center gap-2 transition-all
+              ${sortByPopularity 
+                ? 'bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-500/20' 
+                : isDark ? 'border-slate-800 text-slate-500 hover:text-amber-500' : 'border-[#e5e4d7] text-slate-400 hover:text-amber-600'}`}
+          >
+            <TrendingUp size={14} />
+            Populares
+          </button>
 
           <button
             onClick={() => setShowResolvedOnly(!showResolvedOnly)}

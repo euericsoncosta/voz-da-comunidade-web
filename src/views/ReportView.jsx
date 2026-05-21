@@ -20,9 +20,10 @@ import {
  * @param {function} onSubmitReport - Função global no App.jsx para enviar os dados para o Render.
  * @param {boolean} loading - Estado de carregamento do envio.
  * @param {string} error - Mensagem de erro retornada pela API (sessão expirada, erro de rede, etc).
+ * @param {boolean} isDark - Estado de tema escuro/claro integrado.
  * @param {function} setView - Função de navegação.
  */
-const ReportView = ({ setView, locationData, user, onSubmitReport, loading, error }) => {
+const ReportView = ({ setView, locationData, user, onSubmitReport, loading, error, isDark }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
@@ -33,8 +34,17 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
   const [imageFile, setImageFile] = useState(null);
   const fileInputRef = useRef(null);
 
+  // PALETA DE CORES ADAPTATIVA PARA MODO ESCURO / MODO CLARO
+  const theme = {
+    background: isDark ? 'bg-slate-950 text-white' : 'bg-[#fdfcf0] text-black',
+    card: isDark ? 'bg-slate-900 border-slate-800 text-white shadow-xl' : 'bg-white border-[#e5e4d7] text-black shadow-sm',
+    text: isDark ? 'text-slate-100' : 'text-slate-900',
+    subtext: isDark ? 'text-slate-400' : 'text-slate-500',
+    input: isDark ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-100 text-black placeholder:text-slate-400',
+    border: isDark ? 'border-slate-800' : 'border-[#e5e4d7]'
+  };
+
   // CORREÇÃO E BLINDAGEM DA GEOLOCALIZAÇÃO:
-  // Evita a armadilha do objeto vazio "{}" que é considerado truthy no JS
   const safeLocation = (locationData && locationData.lat && locationData.lng) 
     ? { lat: Number(locationData.lat), lng: Number(locationData.lng) } 
     : { lat: -4.1011, lng: -38.5086 }; // Padrão Horizonte-CE
@@ -82,19 +92,30 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
   };
 
   return (
-    <div className="flex-1 p-8 space-y-8 overflow-y-auto no-scrollbar pb-32 animate-in zoom-in-95 duration-500 bg-[#fdfcf0]">
+    <div className={`flex-1 p-8 space-y-8 overflow-y-auto no-scrollbar pb-32 animate-in zoom-in-95 duration-500 transition-colors duration-500 ${theme.background}`}>
       
+      {/* Bloco de estilo local para forçar a remoção de barras de rolagem em todos os browsers */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}} />
+
       {/* Header */}
       <header className="flex items-center gap-4">
         <button 
           type="button"
           onClick={() => setView('map')}
-          className="p-3 bg-white border border-[#e5e4d7] rounded-2xl text-slate-400 active:scale-90 transition-all shadow-sm"
+          className={`p-3 rounded-2xl active:scale-90 transition-all border ${theme.card}`}
         >
           <ChevronLeft size={20} />
         </button>
         <div>
-          <h2 className="text-2xl font-black text-black tracking-tighter uppercase italic leading-none">
+          <h2 className={`text-2xl font-black tracking-tighter uppercase italic leading-none ${theme.text}`}>
             Novo Relato
           </h2>
           <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">
@@ -104,28 +125,28 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
       </header>
 
       {/* Box de Geolocalização Fixada */}
-      <div className="bg-white p-6 rounded-[32px] border border-[#e5e4d7] shadow-sm space-y-3">
+      <div className={`p-6 rounded-[32px] border space-y-3 ${theme.card}`}>
         <div className="flex items-center gap-3 text-blue-600">
           <MapPin size={18} strokeWidth={2.5} />
           <span className="text-[10px] font-black uppercase tracking-widest">Coordenadas da Mira do Mapa</span>
         </div>
-        <div className="text-[11px] font-bold text-slate-500">
-          <p>Latitude: <span className="text-black font-black">{safeLocation.lat.toFixed(6)}</span></p>
-          <p className="mt-1">Longitude: <span className="text-black font-black">{safeLocation.lng.toFixed(6)}</span></p>
+        <div className={`text-[11px] font-bold ${theme.subtext}`}>
+          <p>Latitude: <span className={`${theme.text} font-black`}>{safeLocation.lat.toFixed(6)}</span></p>
+          <p className="mt-1">Longitude: <span className={`${theme.text} font-black`}>{safeLocation.lng.toFixed(6)}</span></p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-[40px] border border-[#e5e4d7] p-8 shadow-xl space-y-8">
+      <form onSubmit={handleSubmit} className={`rounded-[40px] border p-8 shadow-xl space-y-8 ${theme.card}`}>
         
         {/* Campo de Título */}
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          <label className={`text-[9px] font-black uppercase tracking-widest ml-1 ${theme.subtext}`}>
             O que está acontecendo? *
           </label>
           <input 
             type="text" 
             placeholder="Ex: Cano estourado ou Poste sem luz" 
-            className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 text-sm font-bold text-black outline-none focus:ring-4 ring-blue-600/5 transition-all"
+            className={`w-full h-16 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 ring-blue-600/5 transition-all border ${theme.input}`}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -134,7 +155,7 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
 
         {/* Upload de Imagem */}
         <div className="space-y-3">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          <label className={`text-[9px] font-black uppercase tracking-widest ml-1 ${theme.subtext}`}>
             Evidência Visual (Foto)
           </label>
           
@@ -147,7 +168,7 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
           />
 
           {imagePreview ? (
-            <div className="relative w-full h-52 rounded-[28px] overflow-hidden border border-[#e5e4d7]">
+            <div className={`relative w-full h-52 rounded-[28px] overflow-hidden border ${theme.border}`}>
               <img src={imagePreview} className="w-full h-full object-cover" alt="Pré-visualização" />
               <button 
                 type="button" 
@@ -162,7 +183,7 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
               <button 
                 type="button"
                 onClick={() => fileInputRef.current.click()}
-                className="h-28 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl flex flex-col items-center justify-center text-blue-600 gap-2 active:scale-95 transition-all hover:bg-blue-100/50"
+                className={`h-28 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all ${isDark ? 'bg-blue-950/30 border-blue-500/30 text-blue-400 hover:bg-blue-900/20' : 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100/50'}`}
               >
                 <Camera size={28} />
                 <span className="text-[8px] font-black uppercase tracking-widest">Tirar Foto</span>
@@ -170,7 +191,7 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
               <button 
                 type="button"
                 onClick={() => fileInputRef.current.click()}
-                className="h-28 bg-slate-50 border-2 border-dashed border-[#e5e4d7] rounded-3xl flex flex-col items-center justify-center text-slate-400 gap-2 active:scale-95 transition-all hover:bg-slate-100"
+                className={`h-28 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all ${isDark ? 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800' : 'bg-slate-50 border-[#e5e4d7] text-slate-400 hover:bg-slate-100'}`}
               >
                 <ImageIcon size={28} />
                 <span className="text-[8px] font-black uppercase tracking-widest">Galeria</span>
@@ -181,7 +202,7 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
 
         {/* Seleção de Categoria */}
         <div className="space-y-3">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          <label className={`text-[9px] font-black uppercase tracking-widest ml-1 ${theme.subtext}`}>
             Categoria do Problema *
           </label>
           <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
@@ -193,7 +214,11 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
                   key={cat.id}
                   type="button"
                   onClick={() => setType(cat.id)}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl border transition-all whitespace-nowrap ${isActive ? 'bg-black text-white border-black shadow-lg scale-105' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl border transition-all whitespace-nowrap ${
+                    isActive 
+                      ? (isDark ? 'bg-blue-600 text-white border-transparent shadow-lg scale-105 shadow-blue-500/20' : 'bg-black text-white border-transparent shadow-lg scale-105') 
+                      : (isDark ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-400')
+                  }`}
                 >
                   <Icon size={16} className={isActive ? 'text-white' : cat.color} />
                   <span className="text-[9px] font-black uppercase">{cat.label}</span>
@@ -205,13 +230,13 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
 
         {/* Campo de Bairro */}
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          <label className={`text-[9px] font-black uppercase tracking-widest ml-1 ${theme.subtext}`}>
             Bairro *
           </label>
           <input 
             type="text" 
             placeholder="Ex: Centro, Dunas, Planalto" 
-            className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl px-6 text-sm font-bold text-black outline-none focus:ring-4 ring-blue-600/5 transition-all"
+            className={`w-full h-16 rounded-2xl px-6 text-sm font-bold outline-none focus:ring-4 ring-blue-600/5 transition-all border ${theme.input}`}
             value={neighborhood}
             onChange={(e) => setNeighborhood(e.target.value)}
             required
@@ -220,13 +245,13 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
 
         {/* Descrição Detalhada */}
         <div className="space-y-2">
-          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+          <label className={`text-[9px] font-black uppercase tracking-widest ml-1 ${theme.subtext}`}>
             Descrição Detalhada *
           </label>
           <textarea 
             rows={4} 
             placeholder="Descreva a situação detalhadamente..." 
-            className="w-full p-6 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-black outline-none focus:ring-4 ring-blue-600/5 transition-all resize-none"
+            className={`w-full p-6 rounded-2xl text-sm font-bold outline-none focus:ring-4 ring-blue-600/5 transition-all resize-none border ${theme.input}`}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
@@ -245,7 +270,11 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
         <button 
           type="submit"
           disabled={loading}
-          className="w-full h-20 bg-black text-white rounded-[32px] font-black text-xs uppercase tracking-[3px] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-slate-900 disabled:opacity-50 group"
+          className={`w-full h-20 rounded-[32px] font-black text-xs uppercase tracking-[3px] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all group ${
+            isDark 
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/10' 
+              : 'bg-black hover:bg-slate-900 text-white'
+          } disabled:opacity-50`}
         >
           {loading ? (
             <Loader2 className="animate-spin" size={20} />
@@ -258,7 +287,7 @@ const ReportView = ({ setView, locationData, user, onSubmitReport, loading, erro
         </button>
       </form>
 
-      <p className="text-center text-[8px] font-black text-slate-300 uppercase tracking-[4px]">
+      <p className={`text-center text-[8px] font-black uppercase tracking-[4px] ${theme.subtext}`}>
         Smart Squad • Horizonte Digital
       </p>
 

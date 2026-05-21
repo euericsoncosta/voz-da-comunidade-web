@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   TrendingUp, 
   Zap, 
@@ -11,38 +11,74 @@ import {
   Leaf,
   Construction,
   Loader2,
-  RefreshCcw 
+  RefreshCcw,
+  AlertCircle
 } from 'lucide-react';
+
+// --- CONFIGURAÇÃO DA API (Alinhe com o seu backend ativo local ou de produção) ---
+const API_BASE = 'https://voz-da-comunidade-api-1.onrender.com';
+// const API_BASE = 'http://localhost:3000';
 
 /**
  * ImpactView - Painel de Transparência e Resultados Autogestor de API.
- * CONFIGURAÇÃO: Correção do travamento de carregamento e atualização sob demanda.
+ * Autossuficiente: Faz requisições diretas ao banco de dados para evitar tela em branco.
+ * Otimizado: Ocultação nativa de scrollbars horizontais e verticais para telemóvel.
  */
-const ImpactView = ({ stats, isDark, fetchData }) => {
+const ImpactView = ({ stats, isDark }) => {
+  const [localStats, setLocalStats] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [apiError, setApiError] = useState(null);
 
-  // Dispara a busca de dados apenas UMA vez quando a tela de Impacto é montada
-  useEffect(() => {
-    if (fetchData) {
-      fetchData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Mantido vazio para evitar o loop infinito no backend
-
-  // Função para lidar com o clique de refresh manual
-  const handleRefresh = async () => {
-    if (!fetchData) return;
-    setIsRefreshing(true);
+  // 1. FUNÇÃO INDEPENDENTE DE CONEXÃO À API (Puxa do endpoint '/' que contém o objeto stats)
+  const loadStatsDirectly = useCallback(async (showLoadingIndicator = true) => {
+    if (showLoadingIndicator) setLoading(true);
+    setApiError(null);
     try {
-      await fetchData(); 
-    } catch (error) {
-      console.error("Erro ao atualizar métricas:", error);
+      const res = await fetch(`${API_BASE}/?city=horizonte`, {
+        credentials: 'include', // Essencial para passar os cookies de sessão e persistir login
+        headers: { 'Accept': 'application/json' }
+      });
+      const json = await res.json();
+      
+      if (json.status === 'success' && json.data && json.data.stats) {
+        setLocalStats(json.data.stats);
+      } else {
+        throw new Error("Formato de dados inválido.");
+      }
+    } catch (err) {
+      console.warn("⚠️ Servidor offline ou inacessível. Usando dados defensivos de demonstração.");
+      setApiError("Sem ligação ao servidor. Exibindo dados de demonstração.");
+      
+      // Fallback amigável de demonstração para que a tela NUNCA fique em branco
+      setLocalStats({
+        resolutionRate: 75,
+        total: 18,
+        likes: 54,
+        ranking: [
+          { name: 'Centro', count: 8 },
+          { name: 'Planalto', count: 6 },
+          { name: 'Dunas', count: 4 }
+        ]
+      });
     } finally {
+      setLoading(false);
       setIsRefreshing(false);
     }
+  }, []);
+
+  // Busca os dados assim que o ecrã é montado
+  useEffect(() => {
+    loadStatsDirectly(true);
+  }, [loadStatsDirectly]);
+
+  // Função para o botão de atualização manual
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadStatsDirectly(false);
   };
   
-  // Valores zerados padrão para evitar quebras se o backend retornar objeto vazio
+  // Valores padrão de segurança (Fallback total)
   const defaultStats = {
     resolutionRate: 0,
     total: 0,
@@ -51,12 +87,53 @@ const ImpactView = ({ stats, isDark, fetchData }) => {
     ranking: []
   };
 
-  // Se 'stats' existir, usa ele. Se não, usa o 'defaultStats' (evita travar a tela)
-  const data = stats || defaultStats;
+  // Cadeia de decisão de dados (Estatísticas locais da API > Prop de fallback > Padrão de Segurança)
+  const activeStats = localStats || stats || defaultStats;
+
+  // Mescla inteligente para garantir propriedades calculadas
+  const data = {
+    ...defaultStats,
+    ...activeStats,
+    // Se o backend não enviar os cidadãos ativos, calcula dinamicamente baseado nos apoios
+    activeCitizens: activeStats.activeCitizens || ((activeStats && activeStats.likes) ? Math.max(1, Math.round(activeStats.likes / 3)) : 0)
+  };
+
+  // Mapeamento dinâmico de ícones para o ranking de bairros
+  const getNeighborhoodIcon = (name) => {
+    const lowerName = String(name).toLowerCase();
+    if (lowerName.includes('centro') || lowerName.includes('planalto')) {
+      return <Construction size={12} className="text-blue-500" />;
+    }
+    if (lowerName.includes('dunas') || lowerName.includes('ambiente')) {
+      return <Leaf size={12} className="text-emerald-500" />;
+    }
+    return <Shield size={12} className="text-red-500" />;
+  };
+
+  // Tela de Carregamento Simpatia
+  if (loading && !localStats) {
+    return (
+      <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${isDark ? 'bg-slate-950 text-white' : 'bg-[#fdfcf0] text-black'}`}>
+        <Loader2 className="animate-spin text-blue-600" size={32} />
+        <p className="text-[10px] font-black text-blue-600 uppercase tracking-[4px]">A carregar impacto...</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex-1 p-8 space-y-8 overflow-y-auto no-scrollbar pb-32 animate-in slide-in-from-bottom-10 duration-700 transition-colors duration-500 ${isDark ? 'bg-slate-950 text-white' : 'bg-[#fdfcf0] text-black'}`}>
       
+      {/* Bloco de estilo local para forçar a remoção de barras de rolagem em todos os browsers */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}} />
+
       {/* Cabeçalho com botão de Atualizar integrado */}
       <header className="flex justify-between items-center">
         <div>
@@ -77,6 +154,14 @@ const ImpactView = ({ stats, isDark, fetchData }) => {
           <RefreshCcw size={18} className={isRefreshing ? 'animate-spin text-blue-500' : ''} />
         </button>
       </header>
+
+      {/* Alerta caso esteja offline usando dados locais */}
+      {apiError && (
+        <div className="p-4 bg-orange-50 border border-orange-100 text-orange-600 text-[9px] font-black uppercase rounded-2xl flex items-center gap-3 animate-in fade-in duration-300">
+          <AlertCircle size={16} />
+          <span>{apiError}</span>
+        </div>
+      )}
 
       {/* Card de Destaque - Taxa de Resolução */}
       <section className={`rounded-[44px] p-8 relative overflow-hidden shadow-2xl transition-colors ${isDark ? 'bg-slate-900 border border-slate-800' : 'bg-black text-white'}`}>
@@ -121,7 +206,7 @@ const ImpactView = ({ stats, isDark, fetchData }) => {
           <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mt-1">Apoios</p>
         </div>
 
-        <div className={`p-5 rounded-[32px] border text-center shadow-sm active:scale-95 transition-transform ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#e5e4d7]'}`}>
+        <div className={`p-5 rounded-[32px] border text-center shadow-sm active:scale-95 transition-transform ${isDark ? 'bg-slate-900 border-slate-900' : 'bg-white border-[#e5e4d7]'}`}>
           <Users className="mx-auto mb-2 text-emerald-500" size={22} />
           <span className={`block text-lg font-black leading-none ${isDark ? 'text-white' : 'text-black'}`}>{data.activeCitizens}</span>
           <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mt-1">Ativos</p>
@@ -141,9 +226,7 @@ const ImpactView = ({ stats, isDark, fetchData }) => {
               <div key={index} className="space-y-3">
                 <div className="flex justify-between items-end">
                   <div className="flex items-center gap-2">
-                    {item.type === 'infra' && <Construction size={12} className="text-blue-500" />}
-                    {item.type === 'seguranca' && <Shield size={12} className="text-red-500" />}
-                    {item.type === 'ambiente' && <Leaf size={12} className="text-emerald-500" />}
+                    {getNeighborhoodIcon(item.name)}
                     <span className={`text-xs font-black uppercase tracking-tight ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{item.name}</span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">{item.count} denúncias</span>

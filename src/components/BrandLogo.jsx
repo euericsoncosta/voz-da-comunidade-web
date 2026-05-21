@@ -14,7 +14,7 @@ const BrandLogo = ({ color = "#000000", size = 180, showSubtitle = true }) => {
         height={size * 0.5} 
         viewBox="0 0 400 200" 
         fill="none" 
-        xmlns="http://www.w3.org/2000/svg"
+        xmlns="cd ../assets/vite.svg"
       >
         {}
         <path 

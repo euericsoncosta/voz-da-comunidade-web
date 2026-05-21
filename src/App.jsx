@@ -261,6 +261,7 @@ export default function App() {
             onSubmitReport={handleCreateReport}
             loading={loading}
             error={error}
+            isDark={isDark} 
           />
         );
       case 'details': 

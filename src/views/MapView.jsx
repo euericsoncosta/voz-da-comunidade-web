@@ -10,7 +10,7 @@ import {
   Target 
 } from 'lucide-react';
 
-const HORIZONTE_CENTER = [-4.1011, -38.5086];
+const HORIZONTE_CENTER = [-4.096288, -38.496038];
 const ZOOM_DEFAULT = 14;
 
 const categories = [
